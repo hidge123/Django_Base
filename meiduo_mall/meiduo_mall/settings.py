@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-(2@81g@=e!x(_9v&6_9nw5r!1=fpkz6j9&ms7zm_o37c^7+$9a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['www.meiduo.site', '127.0.0.1']
+ALLOWED_HOSTS = ['www.meiduo.site', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -39,13 +39,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apps.users',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -192,4 +194,14 @@ LOGGING = {
     }
 }
 
+# 覆盖系统User类
 AUTH_USER_MODEL = 'users.User'
+
+# CORS
+CORS_ORIGIN_WHITELIST = (
+    'http://127.0.0.1:8080',
+    'http://localhost:8080',
+    'http://www.meiduo.site:8080',
+    'http://www.meiduo.site:8000'
+)
+CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
