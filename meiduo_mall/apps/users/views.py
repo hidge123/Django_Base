@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 from apps.users.models import User
+from django.contrib.auth import login
+
 
 # Create your views here.
 class UserCountView(View):
@@ -38,16 +40,23 @@ class RegisterView(View):
             return JsonResponse({"code": 400, "errmsg": "参数不全"})
         if not re.match('[a-zA-Z_-]{5,20}', username):
             return JsonResponse({"code": 400, "errmsg": "用户名格式错误"})
+        elif User.objects.filter(username=username).count() != 0:
+            return JsonResponse({"code": 400, "errmsg": "用户名重复"})
         if not re.match(r'\d{8,20}', password):
             return JsonResponse({"code": 400, "errmsg": "密码格式错误"})
         if not password2 == password:
             return JsonResponse({"code": 400, "errmsg": "验证密码与密码不同"})
         if not re.match(r'1[3-9]\d{9}', mobile):
             return JsonResponse({"code": 400, "errmsg": "电话号码格式错误"})
+        elif User.objects.filter(mobile=mobile).count() != 0:
+            return JsonResponse({"code": 400, "errmsg": "电话号重复"})
         # if not re.match('[a-zA-Z_-]{5,20}', allow):
         #     return JsonResponse({"code": 400, "errmsg": "验证码错误"})
 
         # 保存用户信息
-        User.objects.create_user(username=username, password=password, mobile=mobile)
+        user = User.objects.create_user(username=username, password=password, mobile=mobile)
         
+        # 实现状态保持
+        login(request, user)
+
         return JsonResponse({"code": 0, "errmsg": "ok"})
