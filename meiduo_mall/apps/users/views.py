@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views import View
 from apps.users.models import User
 from django.contrib.auth import login
+from django_redis import get_redis_connection
 
 
 # Create your views here.
@@ -33,7 +34,10 @@ class RegisterView(View):
         password = body_dict.get('password')
         password2 = body_dict.get('password2')
         mobile = body_dict.get('mobile')
+        sms_code_cli = body_dict.get('sms_code')
         allow = body_dict.get('allow')
+        redis_cli = get_redis_connection('code')
+        sms_code_ser = redis_cli.get(mobile).decode()
 
         # 验证数据
         if not all([username, password, password2, mobile, allow]):
@@ -50,8 +54,12 @@ class RegisterView(View):
             return JsonResponse({"code": 400, "errmsg": "电话号码格式错误"})
         elif User.objects.filter(mobile=mobile).count() != 0:
             return JsonResponse({"code": 400, "errmsg": "电话号重复"})
+        if not sms_code_ser:
+            return JsonResponse({"code": 400, "errmsg": "短信验证码已过期"})
+        elif sms_code_cli != sms_code_ser:
+            return JsonResponse({"code": 400, "errmsg": "短信验证码错误"})
         # if not re.match('[a-zA-Z_-]{5,20}', allow):
-        #     return JsonResponse({"code": 400, "errmsg": "验证码错误"})
+        #     return JsonResponse({"code": 400, "errmsg": ""})
 
         # 保存用户信息
         user = User.objects.create_user(username=username, password=password, mobile=mobile)

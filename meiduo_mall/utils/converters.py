@@ -9,8 +9,15 @@ class UsernameConverter:
         return value
 
 
-class MobileConverters:
+class MobileConverter:
     regex = r'1[3-9]\d{9}'
+
+    def to_python(self, value):
+
+        return value
+
+class UUIDConverter:
+    regex = r'[\w-]+'
 
     def to_python(self, value):
 
