@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.views import View
 from apps.users.models import User
 from django_redis import get_redis_connection
+import re
 
 
 # Create your views here.
@@ -24,7 +25,6 @@ class MobileCountView(View):
 class RegisterView(View):
     def post(self, request):
         from django.contrib.auth import login
-        import re
 
 
         # 接受请求
@@ -84,6 +84,11 @@ class LoginView(View):
         # 验证数据
         if not all([username, password]):
             return JsonResponse({"code": 400, "errmsg": "参数不全"})
+        # 判断用户名类型
+        if re.match(r'1[3-9]\d{9}', username):
+            User.USERNAME_FIELD = 'mobile'
+        else:
+            User.USERNAME_FIELD = 'username'
         user = authenticate(username=username, password=password)
         if user is not None:
             login(request, user)
