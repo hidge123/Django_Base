@@ -5,6 +5,7 @@ from django.views import View
 from apps.users.models import User
 from django_redis import get_redis_connection
 import re
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 # Create your views here.
@@ -118,3 +119,15 @@ class LogoutView(View):
         response.delete_cookie('username')
 
         return response
+
+
+class CenterView(LoginRequiredMixin, View):
+    # 重写了父类的dispatch方法
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"code": 400, "errmsg": "用户未登录"})
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        
+        return JsonResponse({"code": 0, "errmsg": "ok"})
