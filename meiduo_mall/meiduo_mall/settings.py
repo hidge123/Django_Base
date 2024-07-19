@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.users',
     'corsheaders',
-    'apps.verifications'
+    'apps.verifications',
+    'apps.oauth'
 ]
 
 MIDDLEWARE = [
@@ -205,6 +206,7 @@ LOGGING = {
 # 覆盖系统User类
 AUTH_USER_MODEL = 'users.User'
 
+
 # CORS
 CORS_ORIGIN_WHITELIST = (
     'http://127.0.0.1:8080',
@@ -213,3 +215,11 @@ CORS_ORIGIN_WHITELIST = (
     'http://www.meiduo.site:8000'
 )
 CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
+
+
+# QQ登录配置信息
+QQ_AppId = ''           # QQ_AppId
+
+QQ_SecretId = ''        # QQ_SecretId
+
+redirect_uri = 'http://www.meiduo.site:8000/oauth_callback.html'       # 重定向地址
