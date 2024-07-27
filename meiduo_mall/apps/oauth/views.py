@@ -73,10 +73,10 @@ class OauthQQView(View):
 
         # 获取数据
         data = json.loads(request.body.decode())
-        mobile = request.get('mobile')
-        password = request.get('password')
-        sms_code_cli = request.get('sms_code')
-        openid = request.get('access_token')
+        mobile = data.get('mobile')
+        password = data.get('password')
+        sms_code_cli = data.get('sms_code')
+        openid = data.get('access_token')
         redis_cli = get_redis_connection('code')
         sms_code_ser = redis_cli.get(mobile)
 
@@ -87,8 +87,6 @@ class OauthQQView(View):
             return JsonResponse({"code": 400, "errmsg": "密码格式错误"})
         if not re.match(r'1[3-9]\d{9}', mobile):
             return JsonResponse({"code": 400, "errmsg": "电话号码格式错误"})
-        elif User.objects.filter(mobile=mobile).count() != 0:
-            return JsonResponse({"code": 400, "errmsg": "电话号重复"})
         if not sms_code_ser:
             return JsonResponse({"code": 400, "errmsg": "短信验证码已过期"})
         elif sms_code_cli != sms_code_ser.decode():
