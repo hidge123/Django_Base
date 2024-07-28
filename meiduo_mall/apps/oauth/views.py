@@ -30,6 +30,7 @@ class OauthQQView(View):
     def get(self, request):
             from meiduo_mall.settings import QQ_AppId, QQ_SecretId, redirect_uri
             from oauth.models import OAuthQQUser
+            from apps.oauth.utils import generic_openid
 
 
             # 实例化QQ登录工具
@@ -55,6 +56,8 @@ class OauthQQView(View):
                 qquser = OAuthQQUser.objects.get(openid=openid)
             # 判断用户不存在，发送信息让前端进行绑定
             except OAuthQQUser.DoesNotExist:
+                # 加密openid
+                openid = generic_openid(openid=openid)
                 
                 return JsonResponse({"code": 400, "access_token": openid})
             # 判断用户存在，直接登录
@@ -69,6 +72,8 @@ class OauthQQView(View):
         from apps.users.models import User
         from django_redis import get_redis_connection
         from oauth.models import OAuthQQUser
+        from apps.oauth.utils import check_openid
+
 
 
         # 获取数据
@@ -79,9 +84,11 @@ class OauthQQView(View):
         openid = data.get('access_token')
         redis_cli = get_redis_connection('code')
         sms_code_ser = redis_cli.get(mobile)
+        # 解密openid
+        openid = check_openid(openid=openid)
 
         # 验证数据
-        if not all([ password, mobile]):
+        if not all([openid, password, mobile]):
             return JsonResponse({"code": 400, "errmsg": "参数不全"})
         if not re.match(r'\d{8,20}', password):
             return JsonResponse({"code": 400, "errmsg": "密码格式错误"})
