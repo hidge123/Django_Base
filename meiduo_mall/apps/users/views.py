@@ -137,3 +137,27 @@ class CenterView(LoginRequiredMixin, View):
         }
 
         return JsonResponse({"code": 0, "errmsg": "ok", 'info_data': info_data})
+
+
+class EmailView(LoginRequiredMixin, View):
+    def put(self, request):
+        # 接受请求
+        data = loads(request.body.decode())
+        # 获取数据
+        email = data.get('email')
+        # 验证数据
+        result = re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email)
+        if result is None:
+            
+            return JsonResponse({"code": 400, "errmsg": "邮箱格式错误"})
+
+        # 保存邮箱地址
+        user = request.user     # 获取用户信息
+        user.email = email
+        user.save()
+
+        # 发送激活邮件
+        pass
+
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok"})
