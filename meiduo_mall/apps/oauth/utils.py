@@ -8,7 +8,7 @@ def generic_openid(openid):
     s = Serializer(secret_key=SECRET_KEY)
     openid = s.dumps(openid)
 
-    return openid.decode()
+    return openid
 
 # 解密
 def check_openid(openid):

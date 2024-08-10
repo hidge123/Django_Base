@@ -142,6 +142,7 @@ class CenterView(LoginRequiredMixin, View):
 class EmailView(LoginRequiredMixin, View):
     def put(self, request):
         from django.core.mail import send_mail
+        from apps.users.utils import generic_email_verify_token
 
 
         # 接受请求
@@ -149,9 +150,10 @@ class EmailView(LoginRequiredMixin, View):
         # 获取数据
         email = data.get('email')
         # 验证数据
+        if email is None:
+            return JsonResponse({"code": 400, "errmsg": "参数不全"})
         result = re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email)
         if result is None:
-            
             return JsonResponse({"code": 400, "errmsg": "邮箱格式错误"})
 
         # 保存邮箱地址
@@ -167,10 +169,12 @@ class EmailView(LoginRequiredMixin, View):
 
         # 发送激活邮件
         subject = '美多商城激活邮件'        # 主题
-        message = 'test'        # 内容
+        message = ''        # 内容
         from_email = '美多商城<charliemorningstar@163.com>'     # 发件人
         recipient_list = ['charliemorningstar@163.com']      # 收件人列表
-        html_message = ''       # html内容
+        # 组织激活邮件链接
+        token = generic_email_verify_token(user.id)
+        html_message = f"点击按钮进行激活    <a href='http://www.itcast.cn/?token={token}'>激活</a>"      # html内容
         send_mail(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list, html_message=html_message)
 
         # 返回响应
