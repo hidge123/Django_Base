@@ -141,8 +141,8 @@ class CenterView(LoginRequiredMixin, View):
 
 class EmailView(LoginRequiredMixin, View):
     def put(self, request):
-        from django.core.mail import send_mail
         from apps.users.utils import generic_email_verify_token
+        from celery_tasks.send_email.tasks import celery_send_email
 
 
         # 接受请求
@@ -172,10 +172,8 @@ class EmailView(LoginRequiredMixin, View):
         message = ''        # 内容
         from_email = '美多商城<charliemorningstar@163.com>'     # 发件人
         recipient_list = ['charliemorningstar@163.com']      # 收件人列表
-        # 组织激活邮件链接
         token = generic_email_verify_token(user.id)
-        html_message = f"点击按钮进行激活    <a href='http://www.itcast.cn/?token={token}'>激活</a>"      # html内容
-        send_mail(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list, html_message=html_message)
+        celery_send_email.delay(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list, token=token)
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok"})

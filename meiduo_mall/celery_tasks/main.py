@@ -10,4 +10,4 @@ app = Celery('celery_tasks')
 app.config_from_object('celery_tasks.config')
 
 # 自动检测celery任务
-app.autodiscover_tasks(['celery_tasks.sms.tasks'])
+app.autodiscover_tasks(['celery_tasks.sms.tasks', 'celery_tasks.send_email.tasks'])
