@@ -156,6 +156,13 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
+    "email": { # 邮箱验证
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
 }
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "session"
@@ -230,8 +237,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.163.com'
 EMAIL_PORT = 25
 # 发送邮件的邮箱
-EMAIL_HOST_USER = 'charliemorningstar@163.com'
+EMAIL_HOST_USER = 'youremail'
 # 在邮箱中设置的客户端授权密码
-EMAIL_HOST_PASSWORD = 'ZPDVUEYUOUHCRQFD'
+EMAIL_HOST_PASSWORD = ''
 # 收件人看到的发件人
-EMAIL_FROM = '美多商城<charliemorningstar@163.com>'
+EMAIL_FROM = '美多商城<youremail>'

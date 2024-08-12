@@ -167,16 +167,26 @@ class EmailView(LoginRequiredMixin, View):
             user.email = email
             user.save()
 
-        # 发送激活邮件
+        # 配置发送邮件信息
         subject = '美多商城激活邮件'        # 主题
         message = ''        # 内容
-        from_email = '美多商城<charliemorningstar@163.com>'     # 发件人
-        recipient_list = ['charliemorningstar@163.com']      # 收件人列表
-        token = generic_email_verify_token(user.id)
-        celery_send_email.delay(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list, token=token)
+        from_email = '美多商城<youremail>'     # 发件人
+        recipient_list = [email]      # 收件人列表
+        token = generic_email_verify_token(user.id)         # 对token进行加密
+        # 查询发送标记
+        redis_cli = get_redis_connection("email")
+        result = redis_cli.get(email)
+        if result is None:
+            # 发送激活邮件
+            celery_send_email.delay(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list, token=token)
+            # 添加发送标记
+            redis_cli.setex(email, 300, "1")
 
-        # 返回响应
-        return JsonResponse({"code": 0, "errmsg": "ok"})
+            # 返回响应
+            return JsonResponse({"code": 0, "errmsg": "ok"})
+        else:       # 重复发送
+            # 返回响应
+            return JsonResponse({"code": 400, "errmsg": "频繁发送邮件"})
 
 
 class EmailVerifyView(View):
@@ -192,9 +202,16 @@ class EmailVerifyView(View):
             return JsonResponse({"code": 400, "errmsg": "参数不全或错误"})
         # 查找用户
         user = User.objects.get(id=user_id)
-        # 修改数据
-        user.email_active = True
-        user.save()
+
+        # 验证发送标记是否过期
+        redis_cli = get_redis_connection("email")
+        result = redis_cli.get(user.email)
+        if result is None:
+            return JsonResponse({"code": 400, "errmsg": "链接已过期"})
+        else:
+            # 修改数据
+            user.email_active = True
+            user.save()
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok"})
