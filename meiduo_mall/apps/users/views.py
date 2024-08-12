@@ -177,3 +177,24 @@ class EmailView(LoginRequiredMixin, View):
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok"})
+
+
+class EmailVerifyView(View):
+    def put(self, request):
+        from apps.users.utils import checkout_email_verify_token
+
+
+        # 获取数据
+        token = request.GET.get('token')
+        # 解密数据并验证
+        user_id = checkout_email_verify_token(token)
+        if user_id is None:
+            return JsonResponse({"code": 400, "errmsg": "参数不全或错误"})
+        # 查找用户
+        user = User.objects.get(id=user_id)
+        # 修改数据
+        user.email_active = True
+        user.save()
+
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok"})

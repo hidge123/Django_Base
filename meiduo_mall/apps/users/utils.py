@@ -9,3 +9,14 @@ def generic_email_verify_token(user_id):
     data = s.dumps(user_id)
     
     return data
+
+def checkout_email_verify_token(token):
+    # 创建实例
+    s = Serialier(secret_key=SECRET_KEY)
+    # 解密数据
+    try:
+        data = s.loads(token)
+    except (BadData, SignatureExpired, BadTimeSignature):
+        return None
+    
+    return data
