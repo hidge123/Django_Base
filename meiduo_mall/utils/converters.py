@@ -16,8 +16,17 @@ class MobileConverter:
 
         return value
 
+
 class UUIDConverter:
     regex = r'[\w-]+'
+
+    def to_python(self, value):
+
+        return value
+    
+
+class AreaConverter:
+    regex = r'\d{6}'
 
     def to_python(self, value):
 

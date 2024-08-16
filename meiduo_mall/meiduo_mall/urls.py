@@ -18,12 +18,13 @@ from django.contrib import admin
 from django.urls import path
 from django.urls import include
 from django.urls import register_converter
-from utils.converters import MobileConverter, UsernameConverter, UUIDConverter
+from utils.converters import MobileConverter, UsernameConverter, UUIDConverter, AreaConverter
 
 
 register_converter(UsernameConverter, 'username')
 register_converter(MobileConverter, 'mobile')
 register_converter(UUIDConverter, 'uuid')
+register_converter(AreaConverter, 'area')
 
 
 urlpatterns = [
