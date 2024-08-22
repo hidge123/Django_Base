@@ -1,5 +1,5 @@
 from json import loads
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
 from django.views import View
 from apps.users.models import User
@@ -215,3 +215,63 @@ class EmailVerifyView(View):
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok"})
+
+
+class AddressCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        from apps.areas.models import Address
+
+
+        # 接收数据
+        data = loads(request.body.decode())
+        receiver = data.get('receiver')
+        province_id = data.get('province_id')
+        city_id = data.get('city_id')
+        district_id = data.get('district_id')
+        place = data.get('place')
+        mobile = data.get('mobile')
+        tel = data.get('tel')
+        email = data.get('email')
+        user = request.user
+        # 验证数据
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return HttpResponseBadRequest('缺少必传参数')
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return HttpResponseBadRequest('参数mobile有误')
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return HttpResponseBadRequest('参数tel有误')
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return HttpResponseBadRequest('参数email有误')
+        
+        # 数据入库
+        address = Address.objects.create(
+                user = request.user,
+                title = receiver,
+                receiver = receiver,
+                province_id = province_id,
+                city_id = city_id,
+                district_id = district_id,
+                place = place,
+                mobile = mobile,
+                tel = tel,
+                email = email
+        )
+
+        # 转换数据
+        address_dict = {
+            "id": address.id,
+            "title": address.title,
+            "receiver": address.receiver,
+            "province": address.province.name,
+            "city": address.city.name,
+            "district": address.district.name,
+            "place": address.place,
+            "mobile": address.mobile,
+            "tel": address.tel,
+            "email": address.email
+        }
+        # 返回响应
+
+        return JsonResponse({"code": 0, "errmsg": "ok", "address": address_dict})
