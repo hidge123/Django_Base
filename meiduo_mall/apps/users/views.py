@@ -275,3 +275,32 @@ class AddressCreateView(LoginRequiredMixin, View):
         # 返回响应
 
         return JsonResponse({"code": 0, "errmsg": "ok", "address": address_dict})
+
+
+class AddressView(LoginRequiredMixin, View):
+    def get(self, request):
+        from apps.areas.models import Address
+
+
+        # 查询指定数据
+        user = request.user
+        addresses = Address.objects.filter(user=user, is_deleted=False)
+        # 转换数据
+        address_list = []
+        for address in addresses:
+            address_list.append({
+                "id": address.id,
+                "title": address.title,
+                "receiver": address.receiver,
+                "province": address.province.name,
+                "city": address.city.name,
+                "district": address.district.name,
+                "place": address.place,
+                "mobile": address.mobile,
+                "tel": address.tel,
+                "email": address.email
+            })
+        # 返回响应
+
+        return JsonResponse({"code": 0, "errmsg": "ok", "addresses": address_list})
+            
