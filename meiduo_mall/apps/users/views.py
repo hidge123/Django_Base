@@ -304,3 +304,74 @@ class AddressView(LoginRequiredMixin, View):
 
         return JsonResponse({"code": 0, "errmsg": "ok", "addresses": address_list})
             
+
+class UpdateDestoryAddressVIew(LoginRequiredMixin, View):
+    """更新和删除用户地址"""
+
+
+    def put(self, request, address_id):
+        """更新地址"""
+        from apps.areas.models import Address
+
+
+        # 查询地址
+        data = loads(request.body.decode())
+        receiver = data.get('receiver')
+        province_id = data.get('province_id')
+        city_id = data.get('city_id')
+        district_id = data.get('district_id')
+        place = data.get('place')
+        mobile = data.get('mobile')
+        tel = data.get('tel')
+        email = data.get('email')
+        user = request.user
+
+        # 验证参数
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return JsonResponse({"code": 400, "errmsg": "参数不全"})
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return JsonResponse({"code": 400, "errmsg": "手机号格式错误"})
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return JsonResponse({"code": 400, "errmsg": "tel格式错误"})
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return JsonResponse({"code": 400, "errmsg": "邮箱格式错误"})
+            
+        # 查询指定记录并更新
+        try:
+            Address.objects.filter(id=address_id, user=user, is_deleted=False).update(
+                user = user,
+                title = receiver,
+                receiver = receiver,
+                province_id = province_id,
+                city_id = city_id,
+                district_id = district_id,
+                place = place,
+                mobile = mobile,
+                tel = tel,
+                email = email
+            )
+
+        except Exception as e:
+            return JsonResponse({"code": 400, "errmsg": "更新地址失败"})
+        
+        # 构建响应数据
+        address = Address.objects.get(id=address_id, user=user, is_deleted=False)
+        address_dict = {
+            "id": address.id,
+            "title": address.title,
+            "receiver": address.receiver,
+            "province": address.province.name,
+            "city": address.city.name,
+            "district": address.district.name,
+            "place": address.place,
+            "mobile": address.mobile,
+            "tel": address.tel,
+            "email": address.email
+        }
+
+        # 返回响应
+
+        return JsonResponse({"code": 0, "errmsg": "ok", "address": address_dict})
+    
