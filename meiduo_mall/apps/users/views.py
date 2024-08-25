@@ -6,6 +6,7 @@ from apps.users.models import User
 from django_redis import get_redis_connection
 import re
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.areas.models import Address
 
 
 # Create your views here.
@@ -29,8 +30,11 @@ class RegisterView(View):
 
 
         # 接受请求
-        body_str = request.body.decode()
-        body_dict = loads(body_str)
+        try:
+            body_str = request.body.decode()
+            body_dict = loads(body_str)
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
 
         # 获取数据
         username = body_dict.get('username')
@@ -77,7 +81,10 @@ class LoginView(View):
 
 
         # 获取数据
-        data = loads(request.body.decode())
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
         username = data.get('username')
         password = data.get('password')
         remembered = data.get('remembered')
@@ -90,6 +97,7 @@ class LoginView(View):
             User.USERNAME_FIELD = 'mobile'
         else:
             User.USERNAME_FIELD = 'username'
+        # 验证用户信息
         user = authenticate(username=username, password=password)
         if user is not None:
             login(request, user)
@@ -146,7 +154,10 @@ class EmailView(LoginRequiredMixin, View):
 
 
         # 接受请求
-        data = loads(request.body.decode())
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
         # 获取数据
         email = data.get('email')
         # 验证数据
@@ -219,11 +230,11 @@ class EmailVerifyView(View):
 
 class AddressCreateView(LoginRequiredMixin, View):
     def post(self, request):
-        from apps.areas.models import Address
-
-
         # 接收数据
-        data = loads(request.body.decode())
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
         receiver = data.get('receiver')
         province_id = data.get('province_id')
         city_id = data.get('city_id')
@@ -279,9 +290,6 @@ class AddressCreateView(LoginRequiredMixin, View):
 
 class AddressView(LoginRequiredMixin, View):
     def get(self, request):
-        from apps.areas.models import Address
-
-
         # 查询指定数据
         user = request.user
         addresses = Address.objects.filter(user=user, is_deleted=False)
@@ -301,8 +309,9 @@ class AddressView(LoginRequiredMixin, View):
                 "email": address.email
             })
         # 返回响应
+        default_id = request.user.default_address_id
 
-        return JsonResponse({"code": 0, "errmsg": "ok", "addresses": address_list})
+        return JsonResponse({"code": 0, "errmsg": "ok", "addresses": address_list, 'default_address_id': default_id})
             
 
 class UpdateDestoryAddressVIew(LoginRequiredMixin, View):
@@ -311,11 +320,11 @@ class UpdateDestoryAddressVIew(LoginRequiredMixin, View):
 
     def put(self, request, address_id):
         """更新地址"""
-        from apps.areas.models import Address
-
-
-        # 查询地址
-        data = loads(request.body.decode())
+        # 获取数据 
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
         receiver = data.get('receiver')
         province_id = data.get('province_id')
         city_id = data.get('city_id')
@@ -375,3 +384,62 @@ class UpdateDestoryAddressVIew(LoginRequiredMixin, View):
 
         return JsonResponse({"code": 0, "errmsg": "ok", "address": address_dict})
     
+    def delete(self, request, address_id):
+        """删除地址"""
+        # 查询指定数据并验证
+        user = request.user
+        address = Address.objects.get(user=user, id=address_id, is_deleted=False)
+        if address is None:
+            return JsonResponse({"code": 400, "errmsg": "该地址不存在"})
+        
+        # 删除数据(逻辑删除)
+        address.is_deleted = True
+        address.save()
+        # 返回响应
+
+        return JsonResponse({"code": 0, "errmsg": "ok"})
+
+
+class DefaultAddressView(LoginRequiredMixin, View):
+    """设置默认地址"""
+
+
+    def put(self, request, address_id):
+        # 查询指定数据并验证
+        user = request.user
+        address = Address.objects.get(user=user, id=address_id, is_deleted=False)
+        if address is None:
+            return JsonResponse({"code": 400, "errmsg": "该地址不存在"})
+        # 将该地址设为默认
+        user.default_address = address
+        user.save()
+        # 返回响应
+
+        return JsonResponse({"code": 0, "errmsg": "ok"})
+
+
+class UpdateTitleAddressView(LoginRequiredMixin, View):
+    """修改地址标题"""
+
+
+    def put(self, request, address_id):
+        # 获取数据
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            JsonResponse({"code": 400, "errmsg": "参数不全"})
+        title = data.get('title')
+        user = request.user
+
+        # 查询指定数据并验证
+        if not re.match(r'^.{1,20}$', title):
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
+        address = Address.objects.get(user=user, id=address_id, is_deleted=False)
+        if address is None:
+            return JsonResponse({"code": 400, "errmsg": "该地址不存在"})
+        # 修改地址标题
+        address.title = title
+        address.save()
+        # 返回响应
+        
+        return JsonResponse({"code": 0, "errmsg": "ok"})

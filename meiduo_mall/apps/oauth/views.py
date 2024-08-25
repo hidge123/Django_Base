@@ -77,7 +77,10 @@ class OauthQQView(View):
 
 
         # 获取数据
-        data = json.loads(request.body.decode())
+        try:
+            data = json.loads(request.body.decode())
+        except Exception as e:
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         mobile = data.get('mobile')
         password = data.get('password')
         sms_code_cli = data.get('sms_code')
