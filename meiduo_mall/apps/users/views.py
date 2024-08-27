@@ -34,7 +34,7 @@ class RegisterView(View):
             body_str = request.body.decode()
             body_dict = loads(body_str)
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
 
         # 获取数据
         username = body_dict.get('username')
@@ -84,7 +84,7 @@ class LoginView(View):
         try:
             data = loads(request.body.decode())
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         username = data.get('username')
         password = data.get('password')
         remembered = data.get('remembered')
@@ -157,7 +157,7 @@ class EmailView(LoginRequiredMixin, View):
         try:
             data = loads(request.body.decode())
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         # 获取数据
         email = data.get('email')
         # 验证数据
@@ -234,7 +234,7 @@ class AddressCreateView(LoginRequiredMixin, View):
         try:
             data = loads(request.body.decode())
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         receiver = data.get('receiver')
         province_id = data.get('province_id')
         city_id = data.get('city_id')
@@ -324,7 +324,7 @@ class UpdateDestoryAddressVIew(LoginRequiredMixin, View):
         try:
             data = loads(request.body.decode())
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         receiver = data.get('receiver')
         province_id = data.get('province_id')
         city_id = data.get('city_id')
@@ -427,7 +427,7 @@ class UpdateTitleAddressView(LoginRequiredMixin, View):
         try:
             data = loads(request.body.decode())
         except Exception as e:
-            JsonResponse({"code": 400, "errmsg": "参数不全"})
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
         title = data.get('title')
         user = request.user
 
@@ -443,3 +443,44 @@ class UpdateTitleAddressView(LoginRequiredMixin, View):
         # 返回响应
         
         return JsonResponse({"code": 0, "errmsg": "ok"})
+
+
+class ChangePasswordView(LoginRequiredMixin, View):
+    """修改密码"""
+
+
+    def put(self, request):
+        from django.contrib.auth import logout
+
+
+        # 接受数据
+        try:
+            data = loads(request.body.decode())
+        except Exception as e:
+            return JsonResponse({"code": 400, "errmsg": "参数格式错误"})
+        old_password = data.get('old_password')
+        new_password = data.get('new_password')
+        new_password2 = data.get('new_password2')
+        user = request.user
+
+        # 验证参数
+        if not all([old_password, new_password, new_password2]):
+            return JsonResponse({"code": 400, "errmsg": "参数不全"})
+        if not re.match(r'^[0-9A-Za-z]{8,20}$', new_password):
+            return JsonResponse({'code':400,'errmsg':'密码最少8位,最长20位'})
+        if new_password != new_password2:
+            return JsonResponse({'code':400,'errmsg':'两次输入密码不一致'})
+        result = user.check_password(old_password)
+        if not result:
+            return JsonResponse({'code':400,'errmsg':'原密码不正确'})
+        
+        # 修改密码
+        user.set_password(new_password)
+        user.save()
+        # 清除状态保持信息
+        logout(request)
+        response = JsonResponse({'code':0,'errmsg':'ok'})
+        response.delete_cookie('username')
+
+        # 返回响应
+        return JsonResponse({'code':0, 'errmsg':'ok'})
