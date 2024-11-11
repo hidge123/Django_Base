@@ -245,3 +245,7 @@ EMAIL_HOST_USER = 'youremail'
 EMAIL_HOST_PASSWORD = ''
 # 收件人看到的发件人
 EMAIL_FROM = '美多商城<youremail>'
+
+
+# 指定自定义的Django文件存储类
+DEFAULT_FILE_STORAGE = 'utils.fastdfs.storage.Mystorage'
