@@ -5,6 +5,7 @@ from django.http import HttpResponse, JsonResponse
 
 # Create your views here.
 class ListView(View):
+    """商品数据的展示"""
     def get(self, request, category_id):
         from apps.goods.models import GoodsCategory, SKU
         from utils.goods import get_breadcrumb
@@ -46,3 +47,24 @@ class ListView(View):
             sku_list.append({"name": sku.name, 'id': sku.id, 'default_image_url': sku.default_image.url, 'price': sku.price})
         # 返回响应
         return JsonResponse({'code': 0, 'errmsg':'ok', 'breadcrumb': breadcrumb, 'list':sku_list, 'count': total_num})
+
+
+class HotGoodsView(View):
+    """热销商品的展示"""
+    def get(slef, request, category_id):
+        from apps.goods.models import SKU
+
+
+        # 获取热销商品数据
+        try:
+            skus = SKU.objects.filter(category_id=category_id, is_launched=True).order_by('-sales')[:2]
+        except SKU.DoesNotExist:
+            return JsonResponse({"code":400, "errmsg":"获取mysql数据出错"})
+        
+        # 将数据转化为对应格式
+        hot_skus = []
+        for sku in skus:
+            hot_skus.append({'id': sku.id, 'default_image_url': sku.default_image.url, "name": sku.name, "price": sku.price})
+        
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok", "hot_skus": hot_skus})
