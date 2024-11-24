@@ -2,6 +2,7 @@ from django.shortcuts import render
 from fastdfs_client.client import FastdfsClient
 from django.views import View
 from django.http import HttpResponse, JsonResponse
+from haystack.views import SearchView
 
 # Create your views here.
 class ListView(View):
@@ -33,7 +34,7 @@ class ListView(View):
             return JsonResponse({"code":400, "errmsg":"获取mysql数据出错"})
         paginator = Paginator(skus, page_size)
 
-        # 获取每商品数据
+        # 获取每页商品数据
         try:
             page_skus = paginator.page(page)
         except EmptyPage:
@@ -68,3 +69,26 @@ class HotGoodsView(View):
         
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok", "hot_skus": hot_skus})
+
+
+class SKUSearchView(SearchView):
+    """商品搜索"""
+    def create_response(self):
+        # 获取搜索结果
+        context = self.get_context()
+
+        # 处理数据
+        skus_list = []
+        for item in context['page'].object_list:
+            skus_list.append({
+                'id': item.object.id,
+                'name': item.object.name,
+                'price': item.object.price,
+                'default_image_url': item.object.default_image.url,
+                'searchkey': context.get('query'),
+                'page_size': context['page'].paginator.num_pages,
+                'count': context['page'].paginator.count
+            })
+        
+        # 返回响应
+        return JsonResponse(skus_list, safe=False)
