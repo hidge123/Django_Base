@@ -92,3 +92,32 @@ class SKUSearchView(SearchView):
         
         # 返回响应
         return JsonResponse(skus_list, safe=False)
+
+
+class DetailView(View):
+    """商品详情页展示"""
+    def get(self, request, sku_id):
+        from utils.goods import get_breadcrumb, get_categories, get_goods_specs
+        from apps.goods.models import SKU
+
+
+        # SKU信息
+        try:
+            sku = SKU.objects.get(id=sku_id, is_launched=True)
+        except SKU.DoesNotExist:
+            return JsonResponse({"code": 400, "errmsg": "该数据不存在"})
+        # 获取分类数据
+        categories = get_categories()
+        # 面包屑
+        breadcrumb = get_breadcrumb(sku.category)
+        # 规格信息
+        goods_specs = get_goods_specs(sku=sku)
+
+        # 渲染页面
+        context = {
+            'categories': categories,
+            'breadcrumb': breadcrumb,
+            'sku': sku,
+            'specs': goods_specs
+        }
+        return render(request, 'detail.html', context)
