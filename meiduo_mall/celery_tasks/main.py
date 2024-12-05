@@ -9,5 +9,6 @@ app = Celery('celery_tasks')
 # 设置broker
 app.config_from_object('celery_tasks.config')
 
+
 # 自动检测celery任务
-app.autodiscover_tasks(['celery_tasks.sms.tasks', 'celery_tasks.send_email.tasks'])
+app.autodiscover_tasks(['celery_tasks.sms.tasks', 'celery_tasks.send_email.tasks', 'celery_tasks.generitic_index.tasks'])

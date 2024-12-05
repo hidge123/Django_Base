@@ -162,3 +162,6 @@ cython_debug/
 
 # VsCode
 .vscode
+
+# celery
+celery_beat_schedule/
