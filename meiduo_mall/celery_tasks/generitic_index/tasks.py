@@ -17,11 +17,11 @@ def genertic_meiduo_index():
     for cat in content_categories:
         contents[cat.key] = cat.content_set.filter(status=True).order_by('sequence')
     
-            # 渲染模板的上下文
-        context = {
-            'categories': categories,
-            'contents': contents,
-        }
+    # 渲染模板的上下文
+    context = {
+        'categories': categories,
+        'contents': contents,
+    }
     
     # 加载渲染的模板
     index_template = loader.get_template('index.html')

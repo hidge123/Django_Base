@@ -251,14 +251,14 @@ EMAIL_FROM = '美多商城<youremail>'
 # 指定自定义的Django文件存储类
 DEFAULT_FILE_STORAGE = 'utils.fastdfs.storage.Mystorage'
 # fastdfs的相关参数
-FDFS_BASE_URL = 'http://192.168.1.7/8888/'
+FDFS_BASE_URL = 'http://192.168.1.6/8888/'
 
 
 # Haystack
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
-        'URL': 'http://192.168.1.7:9200/', # Elasticsearch服务器ip地址，端口号固定为9200
+        'URL': 'http://192.168.1.6:9200/', # Elasticsearch服务器ip地址，端口号固定为9200
         'INDEX_NAME': 'meiduo_mall', # Elasticsearch建立的索引库的名称
     },
 }
