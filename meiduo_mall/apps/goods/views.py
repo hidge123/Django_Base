@@ -121,3 +121,32 @@ class DetailView(View):
             'specs': goods_specs
         }
         return render(request, 'detail.html', context)
+
+
+class CategoryVisitCountView(View):
+    """商品种类浏览次数统计"""
+    def post(self, request, category_id):
+        from apps.goods.models import GoodsVisitCount, GoodsCategory
+        from datetime import date
+
+
+        # 验证分类id
+        try:
+            category = GoodsCategory.objects.get(id=category_id)
+        except GoodsCategory.DoesNotExist:
+            return JsonResponse({"code": 400, "errmsg": "没有改商品类别"})
+        
+        # 查询当天该分类记录
+        today = date.today()
+        try:
+            gvc = GoodsVisitCount.objects.get(category=category, date=today)
+        except GoodsVisitCount.DoesNotExist:
+            # 没有就创建该分类数据
+            GoodsVisitCount.objects.create(category=category, count=1, date=today)
+        else:
+            # 有就更新数据
+            gvc.count += 1
+            gvc.save()
+
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok"})
