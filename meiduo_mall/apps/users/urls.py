@@ -1,6 +1,6 @@
 from django.urls import path
 from apps.users.views import LoginView, LogoutView, MobileCountView, RegisterView, UserCountView, CenterView, EmailView, EmailVerifyView, AddressCreateView, AddressView, UpdateDestoryAddressVIew, DefaultAddressView, UpdateTitleAddressView, ChangePasswordView
-
+from apps.users.views import UserBrowseHistory
 
 
 urlpatterns = [
@@ -17,5 +17,6 @@ urlpatterns = [
     path('addresses/<int:address_id>/', UpdateDestoryAddressVIew.as_view()),
     path('addresses/<int:address_id>/default/', DefaultAddressView.as_view()),
     path('addresses/<int:address_id>/title/', UpdateTitleAddressView.as_view()),
-    path('password/', ChangePasswordView.as_view())
+    path('password/', ChangePasswordView.as_view()),
+    path('browse_histories/', UserBrowseHistory.as_view())
 ]

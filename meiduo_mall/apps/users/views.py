@@ -484,3 +484,34 @@ class ChangePasswordView(LoginRequiredMixin, View):
 
         # 返回响应
         return JsonResponse({'code':0, 'errmsg':'ok'})
+
+
+class UserBrowseHistory(LoginRequiredMixin, View):
+    """用户浏览记录视图"""
+    def post(self, request):
+        from apps.goods.models import GoodsCategory
+        from django_redis import get_redis_connection
+
+
+        # 接收数据
+        user = request.user
+        data = loads(request.body.decode())
+        sku_id = data.get('sku_id')
+
+        # 验证数据
+        try:
+            GoodsCategory.objects.get(id='sku_id')
+        except GoodsCategory.DoesNotExist:
+            return JsonResponse({"code": 400, "errmsg": "没有该商品"})
+
+        # 链接redis
+        redis_cli = get_redis_connection("history")
+        # 去重
+        redis_cli.lrem("history%s"%user.id, sku_id)
+        # 添加浏览记录
+        redis_cli.lpush("history_%s"%user.id, sku_id)
+        # 修剪列表，使其只保留五条数据
+        redis_cli.ltrim("history_%s"%user.id, 0, 4)
+
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok"})
