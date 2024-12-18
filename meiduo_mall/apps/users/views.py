@@ -489,7 +489,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
 class UserBrowseHistory(LoginRequiredMixin, View):
     """用户浏览记录视图"""
     def post(self, request):
-        from apps.goods.models import GoodsCategory
+        from apps.goods.models import SKU
         from django_redis import get_redis_connection
 
 
@@ -500,14 +500,14 @@ class UserBrowseHistory(LoginRequiredMixin, View):
 
         # 验证数据
         try:
-            GoodsCategory.objects.get(id='sku_id')
-        except GoodsCategory.DoesNotExist:
+            SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
             return JsonResponse({"code": 400, "errmsg": "没有该商品"})
 
         # 链接redis
         redis_cli = get_redis_connection("history")
         # 去重
-        redis_cli.lrem("history%s"%user.id, sku_id)
+        redis_cli.lrem("history_%s"%user.id, 0, sku_id)
         # 添加浏览记录
         redis_cli.lpush("history_%s"%user.id, sku_id)
         # 修剪列表，使其只保留五条数据
@@ -515,3 +515,26 @@ class UserBrowseHistory(LoginRequiredMixin, View):
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok"})
+    
+    def get(self, request):
+        from apps.goods.models import SKU
+        from django_redis import get_redis_connection
+
+
+        # 获取历史记录
+        redis_cli = get_redis_connection('history')
+        id_list = redis_cli.lrange('history_%s'%request.user.id, 0, -1)
+
+        # 将查询的数据转化json格式
+        history_list = []
+        for sku_id in id_list:
+            sku = SKU.objects.get(id=sku_id)
+            history_list.append({
+                'id': sku.id,
+                'name': sku.name,
+                'default_image_url': sku.default_image.url,
+                'price': sku.price
+            })
+        
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok", "skus": history_list})
