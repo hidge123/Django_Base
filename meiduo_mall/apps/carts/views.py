@@ -69,3 +69,47 @@ class CartView(View):
 
             # 返回响应
             return response
+    
+    def get(self, request):
+        """
+        查询购物车
+        """
+        # 判断用户是否登录
+        user = request.user
+        if user.is_authenticated:
+            # 登录用户从redis中获取数据
+            redis_cli = get_redis_connection('cart')
+            sku_id_count = redis_cli.hgetall('carts_%s'%user.id)
+            selected_ids = redis_cli.smembers('selected_%s'%user.id)
+            # 将数据转化为字典格式
+            carts = {}
+            for sku_id, count in sku_id_count.items():
+                carts[sku_id] = {"count": count, "selected": sku_id in selected_ids}
+
+        else:
+            # 未登录用户从cookie中获取数据
+            cookie_carts = request.COOKIES.get('carts')
+            # 判断字典数据是否存在
+            if cookie_carts is not None:
+                # 有就查询数据
+                # 对数据进行解密
+                carts = pickle.loads(base64.b64decode(cookie_carts))
+
+            else:
+                # 未存在就初始化一个空字典
+                carts = {}
+                return JsonResponse({"code": 0, "errmsg": "ok", "cart_skus": []})
+
+        # 查询商品数据
+        sku_ids = carts.keys()
+        skus = SKU.objects.filter(id__in=sku_ids)
+        # 将数据转化为字典数据
+        sku_list = []
+        for sku in skus:
+            sku_list.append({
+            'id': sku.id, 'name': sku.name, 'price': sku.price, 'default_image_url': sku.default_image.url,
+            'selected': carts[sku.id]['selected'], 'count': carts[sku.id]['count'], 'amount': sku.price*carts[sku.id]['count']
+            })
+
+        # 返回响应
+        return JsonResponse({"code": 0, "errmsg": "ok", "cart_skus": sku_list})
