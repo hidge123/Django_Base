@@ -33,9 +33,11 @@ class CartView(View):
         if user.is_authenticated:
             # 登录用户将数据存储在redis中
             redis_cli = get_redis_connection('cart')
-            redis_cli.hincrby('cart_%s'%user.id, sku_id, count)
+            pipline = redis_cli.pipeline()
+            pipline.hincrby('carts_%s'%user.id, sku_id, count)
             # 保存选中状态(默认就是选中状态)
-            redis_cli.sadd('selected_%s'%user.id, sku_id)
+            pipline.sadd('selected_%s'%user.id, sku_id)
+            pipline.execute()
 
             # 返回响应
             return JsonResponse({"code": 0, "errmsg": "ok"})
@@ -85,7 +87,7 @@ class CartView(View):
             # 将数据转化为字典格式
             carts = {}
             for sku_id, count in sku_id_count.items():
-                carts[sku_id] = {"count": count, "selected": sku_id in selected_ids}
+                carts[int(sku_id)] = {"count": int(count), "selected": sku_id in selected_ids}
 
         else:
             # 未登录用户从cookie中获取数据
@@ -145,11 +147,14 @@ class CartView(View):
         if user.is_authenticated:
             # 登录用户更新redis
             redis_cli = get_redis_connection('cart')
-            redis_cli.hset('carts_%s'%user.id, sku_id, count)
+            pipeline = redis_cli.pipeline()
+            pipeline.hset('carts_%s'%user.id, sku_id, count)
             if selected:
-                redis_cli.sadd('selected_%s'%user.id, sku_id)
+                pipeline.sadd('selected_%s'%user.id, sku_id)
+                pipeline.execute()
             else:
-                redis_cli.srem('selected_%s'%user.id, sku_id)
+                pipeline.srem('selected_%s'%user.id, sku_id)
+                pipeline.execute()
 
             # 返回响应
             return JsonResponse({"code": 0, "errmsg": "ok", "cart_sku": {"count": count, "selected": selected}})
@@ -190,8 +195,10 @@ class CartView(View):
         if user.is_authenticated:
             # 登录用户操作redis
             redis_cli = get_redis_connection('cart')
-            redis_cli.hdel('carts_%s'%user.id, sku_id)  # 删除hash表中数据
-            redis_cli.srem('selected_%s'%user.id, sku_id)   # 删除选中状态
+            pipeline = redis_cli.pipeline()
+            pipeline.hdel('carts_%s'%user.id, sku_id)  # 删除hash表中数据
+            pipeline.srem('selected_%s'%user.id, sku_id)   # 删除选中状态
+            pipeline.execute()
 
             return JsonResponse({"code": 0, "errmsg": "ok"})
         
