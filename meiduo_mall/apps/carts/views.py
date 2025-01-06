@@ -33,7 +33,7 @@ class CartView(View):
         if user.is_authenticated:
             # 登录用户将数据存储在redis中
             redis_cli = get_redis_connection('cart')
-            redis_cli.hset('cart_%s'%user.id, sku_id, count)
+            redis_cli.hincrby('cart_%s'%user.id, sku_id, count)
             # 保存选中状态(默认就是选中状态)
             redis_cli.sadd('selected_%s'%user.id, sku_id)
 
@@ -175,3 +175,44 @@ class CartView(View):
             response.set_cookie('carts', carts.decode(), max_age=14*24*3600)
             return response
 
+    def delete(self, request):
+        """购物车删除"""
+        # 获取并验证数据
+        data = loads(request.body.decode())
+        sku_id = data.get('sku_id')
+        try:
+            SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
+            return JsonResponse({"code": 400, "errmsg": "没有此商品"})
+        
+        # 判断用户是否登录
+        user = request.user
+        if user.is_authenticated:
+            # 登录用户操作redis
+            redis_cli = get_redis_connection('cart')
+            redis_cli.hdel('carts_%s'%user.id, sku_id)  # 删除hash表中数据
+            redis_cli.srem('selected_%s'%user.id, sku_id)   # 删除选中状态
+
+            return JsonResponse({"code": 0, "errmsg": "ok"})
+        
+        else:
+            # 未登录用户操作cookie
+            cookie_carts = request.COOKIES.get('carts')
+            # 判断是否有cookie数据
+            if cookie_carts is not None:
+                # 有就解密数据
+                carts = pickle.loads(base64.b64decode(cookie_carts))
+            else:
+                # 没有cookie数据就初始化
+                carts = {}
+            
+            # 删除数据
+            del carts[sku_id]
+            # 加密数据
+            carts = base64.b64encode(pickle.dumps(carts))
+            # 设置cookie
+            response = JsonResponse({"code": 0, "errmsg": "ok"})
+            response.set_cookie('carts', carts.decode(), max_age=14*24*3600)
+
+            # 返回响应
+            return response
