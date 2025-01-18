@@ -78,6 +78,7 @@ class RegisterView(View):
 class LoginView(View):
     def post(self, request):
         from django.contrib.auth import authenticate, login
+        from apps.carts.utils import merge_cookie_to_redis
 
 
         # 获取数据
@@ -113,6 +114,9 @@ class LoginView(View):
         # 返回响应
         response = JsonResponse({"code": 0, "errmsg": "ok"})
         response.set_cookie('username', username)
+
+        # 合并购物车数据
+        response = merge_cookie_to_redis(request, response)
 
         return response
 
