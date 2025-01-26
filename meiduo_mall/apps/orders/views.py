@@ -11,6 +11,9 @@ class OrderSettlementView(LoginRequiredMixin, View):
     """订单结算"""
 
     def get(self, request):
+        from decimal import Decimal
+
+
         # 获取用户信息
         user = request.user
 
@@ -56,6 +59,7 @@ class OrderSettlementView(LoginRequiredMixin, View):
             })
         
         # 返回响应
-        context = {"skus": sku_list, "addresses": address_list, "freight": 10}
+        freight = Decimal(10)
+        context = {"skus": sku_list, "addresses": address_list, "freight": freight}
 
         return JsonResponse({"code": 0, "errmsg": "ok", "context": context})

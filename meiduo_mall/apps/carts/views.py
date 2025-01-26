@@ -55,7 +55,7 @@ class CartView(View):
                 # 判断数据是否已存在
                 if sku_id in carts:
                     # 存在就更新数据
-                    count += carts[sku_id]["count"]
+                    count += carts.get(sku_id).get("count")
 
                 carts[sku_id] = {"count": count, "selected": True}
             else:
@@ -223,3 +223,56 @@ class CartView(View):
 
             # 返回响应
             return response
+
+
+class CartSimpleView(View):
+    """商品页面右上角购物车简单展示"""
+    def get(self, request):
+        # 判断用户登录状态
+        user = request.user
+        if user.is_authenticated:
+            # 获取redis中的数据
+            redis_cli = get_redis_connection('cart')
+            pipeline = redis_cli.pipeline()
+            pipeline.hgetall('carts_%s'%user.id)
+            pipeline.smembers('selected_%s'%user.id)
+            result = pipeline.execute()
+
+            # 将查询到的数据与redis中的数据格式统一
+            if len(result) == 2:
+                sku_count = result[0]
+                selected_ids = result[1]
+                carts = {}
+
+                for sku_id, count in sku_count.items():
+                    carts[int(sku_id)] = {'count': int(count), 'selected': sku_id in selected_ids}
+
+            else:
+                carts = {}
+
+        else:
+            # 获取cookie数据
+            cookie_carts = request.COOKIES.get('carts')
+            # 判断cookie中的数据是否存在
+            if cookie_carts is not None:
+                # 解密数据
+                carts = pickle.loads(base64.b64decode(cookie_carts))
+            
+            else:
+                # 没有就初始化
+                carts = {}
+        
+        # 将查询到的数据整理为列表格式返回
+        cart_skus = []
+        # 验证sku数据
+        for sku_id in carts.keys():
+            try:
+                SKU.objects.get(id=sku_id)
+            except:
+                del carts[sku_id]
+        
+        skus = SKU.objects.filter(id__in=carts.keys())
+        for sku in skus:
+            cart_skus.append({"id": sku.id, "name": sku.name, "default_image_url": sku.default_image.url, "count": carts.get(sku.id).get("count")})
+
+        return JsonResponse({"code": 0, "errmsg": "ok", "cart_skus": cart_skus})
