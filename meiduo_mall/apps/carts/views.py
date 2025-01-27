@@ -214,7 +214,8 @@ class CartView(View):
                 carts = {}
             
             # 删除数据
-            del carts[sku_id]
+            if sku_id in carts:
+                del carts[sku_id]
             # 加密数据
             carts = base64.b64encode(pickle.dumps(carts))
             # 设置cookie
@@ -273,6 +274,8 @@ class CartSimpleView(View):
         
         skus = SKU.objects.filter(id__in=carts.keys())
         for sku in skus:
-            cart_skus.append({"id": sku.id, "name": sku.name, "default_image_url": sku.default_image.url, "count": carts.get(sku.id).get("count")})
+            cart_skus.append({
+                "id": sku.id, "name": sku.name, "default_image_url": sku.default_image.url, "count": carts.get(sku.id).get("count")
+                })
 
         return JsonResponse({"code": 0, "errmsg": "ok", "cart_skus": cart_skus})
