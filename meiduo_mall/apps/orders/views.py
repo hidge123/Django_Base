@@ -72,6 +72,7 @@ class OrderCommitView(LoginRequiredMixin, View):
         from apps.orders.models import OrderInfo, OrderGoods
         from decimal import Decimal
         from django.utils import timezone
+        from django.db import transaction
 
 
         user = request.user
@@ -101,55 +102,63 @@ class OrderCommitView(LoginRequiredMixin, View):
         total_amount = Decimal('0')
         freight = Decimal('10.00')  # 运费
 
-        orderinfo = OrderInfo.objects.create(
-            order_id = order_id,
-            user = user,
-            address = address,
-            total_amount = total_amount,
-            total_count = total_count,
-            freight = freight,
-            pay_method = pay_method,
-            status = status
-        )
+        with transaction.atomic():
+            point = transaction.savepoint()     # 事务的起始点
 
-        # 保存订单商品信息
-        # 获取redis中的数据
-        redis_cli = get_redis_connection('cart')
-        pipeline = redis_cli.pipeline()
-        pipeline.hgetall('carts_%s'%user.id)
-        pipeline.smembers('selected_%s'%user.id)
-        sku_id_counts, selected_ids = pipeline.execute()
+            orderinfo = OrderInfo.objects.create(
+                order_id = order_id,
+                user = user,
+                address = address,
+                total_amount = total_amount,
+                total_count = total_count,
+                freight = freight,
+                pay_method = pay_method,
+                status = status
+            )
 
-        # 重新组织选中的商品信息
-        carts = {}
-        for sku_id in selected_ids:
-            carts[int(sku_id)] = int(sku_id_counts.get(sku_id))
-        
-        # 查询商品信息并保存入库
-        for sku_id, count in carts.items():
-            sku = SKU.objects.get(id=sku_id)
-            # 判断商品库存是否充足
-            if sku.stock < count:
-                return JsonResponse({"code": 400, "errmsg": "商品不足，下单失败"})
-            else:
-                sku.stock -= count  # 更新库存
-                sku.sales += count  # 更新销量
-                sku.save()
+            # 保存订单商品信息
+            # 获取redis中的数据
+            redis_cli = get_redis_connection('cart')
+            pipeline = redis_cli.pipeline()
+            pipeline.hgetall('carts_%s'%user.id)
+            pipeline.smembers('selected_%s'%user.id)
+            sku_id_counts, selected_ids = pipeline.execute()
 
-                # 更新商品总数和总金额
-                orderinfo.total_amount += (sku.price*count)
-                orderinfo.total_count += count
-                
-                # 数据入库
-                OrderGoods.objects.create(
-                    order = orderinfo,
-                    sku = sku,
-                    count = count,
-                    price = sku.price
-                )
-        orderinfo.save()
+            # 重新组织选中的商品信息
+            carts = {}
+            for sku_id in selected_ids:
+                carts[int(sku_id)] = int(sku_id_counts.get(sku_id))
+            
+            # 查询商品信息并保存入库
+            for sku_id, count in carts.items():
+                sku = SKU.objects.get(id=sku_id)
+                # 判断商品库存是否充足
+                if sku.stock < count:
+                    transaction.savepoint_rollback(point)   # 事务的回滚点
+                    return JsonResponse({"code": 400, "errmsg": "商品不足，下单失败"})
+                else:
+                    sku.stock -= count  # 更新库存
+                    sku.sales += count  # 更新销量
+                    sku.save()
+
+                    # 更新商品总数和总金额
+                    orderinfo.total_amount += (sku.price*count)
+                    orderinfo.total_count += count
+                    
+                    # 订单商品信息数据入库
+                    OrderGoods.objects.create(
+                        order = orderinfo,
+                        sku = sku,
+                        count = count,
+                        price = sku.price
+                    )
+            orderinfo.save()
+            transaction.savepoint_commit(point)     # 事务的提交点
         
         # 从redis中移除已提交的商品
+        pipeline.hdel('carts_%s' % user.id, *selected_ids)
+        pipeline.srem('carts_%s' % user.id, *selected_ids)
+        pipeline.execute()
 
         # 返回响应
         return JsonResponse({"code": 0, "errmsg": "ok", "order_id": order_id})
