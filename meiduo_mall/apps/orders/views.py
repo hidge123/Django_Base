@@ -91,7 +91,7 @@ class OrderCommitView(LoginRequiredMixin, View):
             return JsonResponse({"code": 400, "errmsg": "支付方法错误"})
         
         # 保存订单基本信息
-        order_id = timezone.localtime().strftime(r'%Y%m%d%H%M%S') + '%09d'%user.id
+        order_id = timezone.localtime().strftime(r'%Y%m%d%H%M%S%f') + '%09d'%user.id
         # 根据用户支付方式生成支付状态
         if pay_method == OrderInfo.PAY_METHODS_ENUM['CASH']:
             status = OrderInfo.ORDER_STATUS_ENUM['UNSEND']  # 货代付款
@@ -123,6 +123,8 @@ class OrderCommitView(LoginRequiredMixin, View):
             pipeline.hgetall('carts_%s'%user.id)
             pipeline.smembers('selected_%s'%user.id)
             sku_id_counts, selected_ids = pipeline.execute()
+            if not all([sku_id_counts, selected_ids]):
+                return JsonResponse({"code": 400, "errmsg": "参数不全"})
 
             # 重新组织选中的商品信息
             carts = {}
@@ -137,23 +139,35 @@ class OrderCommitView(LoginRequiredMixin, View):
                     transaction.savepoint_rollback(point)   # 事务的回滚点
                     return JsonResponse({"code": 400, "errmsg": "商品不足，下单失败"})
                 else:
-                    sku.stock -= count  # 更新库存
-                    sku.sales += count  # 更新销量
-                    sku.save()
+                    for i in range(3):
+                        # 乐观锁
+                        old_stcok = sku.stock   # 记录原始数据
+                        # 更改数据
+                        new_stock = sku.stock - count
+                        new_sales = sku.sales + count
+                        # 从数据库中更改数据（在此之前先判断数据是否被更改）
+                        result = SKU.objects.filter(id=sku_id, stock=old_stcok).update(stock=new_stock, sales=new_sales)
+                        
+                        if result == 0:     # 如果更改记录为零条，则说明更改失败（原数据已被更改，需重新判断）
+                            from time import sleep
+                            sleep(0.005)
+                            continue
 
-                    # 更新商品总数和总金额
-                    orderinfo.total_amount += (sku.price*count)
-                    orderinfo.total_count += count
-                    
-                    # 订单商品信息数据入库
-                    OrderGoods.objects.create(
-                        order = orderinfo,
-                        sku = sku,
-                        count = count,
-                        price = sku.price
-                    )
-            orderinfo.save()
-            transaction.savepoint_commit(point)     # 事务的提交点
+                        # 更新商品总数和总金额
+                        orderinfo.total_amount += (sku.price*count)
+                        orderinfo.total_count += count
+                        
+                        # 订单商品信息数据入库
+                        OrderGoods.objects.create(
+                            order = orderinfo,
+                            sku = sku,
+                            count = count,
+                            price = sku.price
+                        )
+                        break
+
+                orderinfo.save()
+                transaction.savepoint_commit(point)     # 事务的提交点
         
         # 从redis中移除已提交的商品
         pipeline.hdel('carts_%s' % user.id, *selected_ids)
