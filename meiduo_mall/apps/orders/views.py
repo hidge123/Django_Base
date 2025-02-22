@@ -171,7 +171,7 @@ class OrderCommitView(LoginRequiredMixin, View):
         
         # 从redis中移除已提交的商品
         pipeline.hdel('carts_%s' % user.id, *selected_ids)
-        pipeline.srem('carts_%s' % user.id, *selected_ids)
+        pipeline.srem('selected_%s' % user.id, *selected_ids)
         pipeline.execute()
 
         # 返回响应
