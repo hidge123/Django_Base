@@ -283,3 +283,11 @@ HAYSTACK_CONNECTIONS = {
 
 # 设置搜索结果分页数
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 5
+
+# 支付宝相关
+ALIPAY_APPID = '9021000144618384'
+ALIPAY_DEBUG = True
+ALIPAY_URL = 'https://openapi-sandbox.dl.alipaydev.com/gateway.do'
+ALIPAY_RETURN_URL = 'http://www.meiduo.site:8080/pay_success.html'
+APP_PRIVATE_KEY_PATH = os.path.join(BASE_DIR, 'apps/payment/key/app_private_key.pem')
+ALIPAY_PUBLIC_KEY_PATH = os.path.join(BASE_DIR, 'apps/payment/key/alipay_public_key.pem')
